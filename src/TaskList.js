@@ -1,25 +1,36 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
+import TaskItem from './TaskItem.js';
 import incompleteIcon from './images/Incomplete.svg';
 import completedIcon from './images/Completed.svg';
+import lockedIcon from './images/Locked.svg';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { ListGroup, ListGroupItem, Badge, Collapse, Card, CardHeader, CardSubtitle, CardBody, CardText, CardTitle, Row, Col} from 'reactstrap'
+import {ListGroup, ListGroupItem, Badge, Collapse, Card, CardHeader, CardSubtitle, CardBody, CardText, CardTitle, Row, Col} from 'reactstrap'
 
 class TaskList extends Component {
     constructor(props) {
         super(props);
 		this.tasks = props.tasks
-		this.taskMap = this.initializeTaskMap(props.tasks);
+		this.taskMap =  this.initializeTaskMap(props.tasks);
+		this.taskGroupMap = this.initializeTaskGroupMap(props.tasks);
+		this.taskInfoElement = "";
+		this.task = null;
+		this.isLocked = false;
 		this.state = {
-			taskMap: this.taskMap,
-			tasks: this.tasks,
-			isLocked: false,
-			isIncomplete: true,
-			isComplete: false
+			taskGroupMap: this.taskGroupMap,
+			updateRender: false,
 		};
     }
     
 	initializeTaskMap(tasks) {
+		var taskMap = new Object();
+		for(var i = 0; i < tasks.length; i++)
+		{
+			taskMap[tasks[i].id] =  tasks[i];
+		}
+		return taskMap;
+	}
+	
+	initializeTaskGroupMap(tasks) {
 		var taskGroupMap = new Object();
 		for(var i = 0; i < tasks.length; i++)
 		{
@@ -46,43 +57,57 @@ class TaskList extends Component {
 		return taskGroupMap;
 	}
 	
-	updateTask(task, index) {
-		if (task.completedAt == null)
-		{
-			task.completedAt = new Date().toString()
-			this.taskMap[task.group].taskCompleted++;
-		}
-        else
-		{
-			task.completedAt = null;
-			this.taskMap[task.group].taskCompleted--;
-		}
+	updateTask = (task, locked) =>
+	{
+		this.task = task;
+		this.isLocked = locked;
 		this.setState({
-			isIncomplete: (task.completedAt == null),
-			isComplete: (task.completedAt != null)
+			updateRender: true,
 		});
 	}
+	
+	updateTaskGroup = () =>
+	{
+		// ToDo: Fix making it incomplete for dependent ids
+		const completed = (this.task.completedAt != null)
+		if ((!this.isLocked) && (!completed)) {
+			this.taskGroupMap[this.task.group].taskCompleted++;
+			this.task.completedAt = new Date().toString();
+			this.setState({
+				taskGroupMap: this.taskGroupMap
+			});
+		}
+		else if ((!this.isLocked) && (completed)) {
+			this.taskGroupMap[this.task.group].taskCompleted--;
+			this.task.completedAt = null;
+			this.setState({
+				taskGroupMap: this.taskGroupMap
+			});
+		}
+	}
+	
 	renderTaskList()
 	{
-		var keys = Object.keys(this.taskMap);
+		var keys = Object.keys(this.taskGroupMap);
 		var buffer = [];
+		// For each group
 		for(var i = 0; i < keys.length; i++)
 		{
 			var key = keys[i];
 			buffer.push(
 				<CardBody key = {key}>
 					<CardTitle>{key}</CardTitle>
-					<CardText>{this.state.taskMap[key].taskCompleted} OF {this.state.taskMap[key].taskTotal} TASKS COMPLETE</CardText>
+					<CardText>{this.state.taskGroupMap[key].taskCompleted} OF {this.taskGroupMap[key].taskTotal} TASKS COMPLETE</CardText>
 				</CardBody>
 			);
 			// Add task to corresponding group
-			var tasks = this.taskMap[key].tasks;
+			var tasks = this.taskGroupMap[key].tasks;
 			var bufferTaskList = [];
 			for(var j = 0; j < tasks.length; j++)
 			{
 				var item = tasks[j];
 				var itemKey = tasks[j].group+tasks[j].id;
-				bufferTaskList.push(<ListGroupItem key={itemKey} onClick={this.updateTask.bind(this, tasks[j], j)} >{this.state.tasks[j].task}</ListGroupItem>);
+				bufferTaskList.push(<TaskItem key={itemKey} callback={this.updateTask} task={tasks[j]} index = {j} taskMap={this.taskMap} />);
 			}
 			buffer.push(<ListGroup>{bufferTaskList}</ListGroup>);
 		}
@@ -94,55 +119,55 @@ class TaskList extends Component {
 		return element;
 	}
 	
-	CustomListGroupItem(props) {
-		if (props.state)
-		{
-			return (
-				<li className="list-group-item" onClick={() => {}}>
-					<img src={completedIcon} />{'\u00A0\u00A0\u00A0'}<strike>{props.text}</strike>
+	renderTaskDetail()
+	{
+		if (this.task == null)
+			return ""			
+
+		if (this.state.updateRender){
+			var icon = lockedIcon;
+			var text = "Locked Task";
+			
+			var lockedElement = "";
+			if (this.isLocked) {
+				lockedElement = (
+					<li className="list-group-item" onClick={this.updateTaskGroup}>
+						<img src={icon} />{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{text}
+					</li>
+				);
+			}
+			
+			icon = completedIcon;
+			text = "Complete Task";
+			if (this.task.completedAt == null) {
+				icon = incompleteIcon;
+				text = "Incomplete Task"
+			}
+			var completeElement = (
+				<li className="list-group-item" onClick={this.updateTaskGroup}>
+					<img src={icon} />{'\u00A0\u00A0\u00A0\u00A0\u00A0'}{text}
 				</li>
 			);
-		}
-		else
-		{
-			return (
-				<li className="list-group-item" onClick={() => {}}>
-					<img src={incompleteIcon} />{'\u00A0\u00A0\u00A0'}{props.text}
-				</li>
+		
+			const element = (
+				<Card body>
+					{lockedElement}
+					{completeElement}
+				</Card>
 			);
+			return element;
 		}
 	}
 	
-	renderTaskDetail()
-	{
-		var buffer = [];
-		var bufferTaskDetail = [];
-
-		//bufferTaskDetail.push(<this.CustomComponent state={this.state} text={"Locked Task"}/>);
-		bufferTaskDetail.push(<ListGroupItem>Locked Task {this.state.isLocked}</ListGroupItem>);
-		bufferTaskDetail.push(<this.CustomListGroupItem state={this.state.isIncomplete} text={"Incomplete Task"} />);
-		bufferTaskDetail.push(<this.CustomListGroupItem state={this.state.isComplete} text={"Complete Task"} />);
-		buffer.push(<ListGroup>{bufferTaskDetail}</ListGroup>);
-		const element = (
-			<Card body>
-				{buffer}
-			</Card>
-		);
-		return element;
-	}
     render() {
         return (
             <div>
 				<Row>
-					<Col sm="6">
-						<Card body>
-							{this.renderTaskList()}
-						</Card>
+					<Col sm="6">		
+						{this.renderTaskList()}	
 					</Col>
-					<Col sm="6">
-						<Card body>
-							{this.renderTaskDetail()}
-						</Card>
+					<Col sm="6">						
+						{this.renderTaskDetail()}
 					</Col>
 				</Row>
             </div>

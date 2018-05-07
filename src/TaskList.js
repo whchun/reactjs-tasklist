@@ -3,8 +3,9 @@ import TaskItem from './TaskItem.js';
 import incompleteIcon from './images/Incomplete.svg';
 import completedIcon from './images/Completed.svg';
 import lockedIcon from './images/Locked.svg';
+import groupIcon from './images/Group.svg';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {ListGroup, ListGroupItem, Badge, Collapse, Card, CardHeader, CardSubtitle, CardBody, CardText, CardTitle, Row, Col} from 'reactstrap'
+import {ListGroup, Badge, Collapse, Card, CardBody, CardText, CardTitle, Row, Col} from 'reactstrap'
 
 class TaskList extends Component {
     constructor(props) {
@@ -12,7 +13,7 @@ class TaskList extends Component {
 		this.tasks = props.tasks
 		this.taskMap =  this.initializeTaskMap(props.tasks);
 		this.taskGroupMap = this.initializeTaskGroupMap(props.tasks);
-		this.taskInfoElement = "";
+		
 		this.task = null;
 		this.isLocked = false;
 		this.state = {
@@ -21,15 +22,22 @@ class TaskList extends Component {
 		};
     }
     
+	// Create hash table that maps task id to corresponding task
+	// This is used to find dependency tasks easily.
 	initializeTaskMap(tasks) {
 		var taskMap = new Object();
 		for(var i = 0; i < tasks.length; i++)
 		{
-			taskMap[tasks[i].id] =  tasks[i];
+			var taskObj = new Object();
+			taskObj.task = tasks[i];
+			taskObj.isActive = false;
+			taskMap[tasks[i].id] = taskObj;
 		}
 		return taskMap;
 	}
 	
+	// Create hash table that maps group name to list of tasks and group information.
+	// [groupName] => {taskCompleted, taskTotal, isActive, [tasks]}
 	initializeTaskGroupMap(tasks) {
 		var taskGroupMap = new Object();
 		for(var i = 0; i < tasks.length; i++)
@@ -50,6 +58,7 @@ class TaskList extends Component {
 				if (tasks[i].completedAt != null)
 					taskGroupInfo.taskCompleted = 1;
 				taskGroupInfo.taskTotal = 1;
+				taskGroupInfo.isActive = false;
 				taskGroupInfo.tasks = new Array(tasks[i]);
 				taskGroupMap[key] = taskGroupInfo;
 			}
@@ -57,15 +66,24 @@ class TaskList extends Component {
 		return taskGroupMap;
 	}
 	
+	// Handle when each task is selected
 	updateTask = (task, locked) =>
 	{
 		this.task = task;
 		this.isLocked = locked;
+		var keys = Object.keys(this.taskMap);
+		for(var i = 0; i < keys.length; i++)
+		{
+			const key = keys[i];
+			this.taskMap[key].isActive = false;
+		}
+		this.taskMap[task.id].isActive = true;
 		this.setState({
 			updateRender: true,
 		});
 	}
 	
+	// Handle when marked as complete or incomplete
 	updateTaskGroup = () =>
 	{
 		// ToDo: Fix making it incomplete for dependent ids
@@ -86,6 +104,13 @@ class TaskList extends Component {
 		}
 	}
 	
+	// Handle collapsing the group task
+	updateCollapse(key) {
+		var groupMap = this.taskGroupMap;
+		groupMap[key].isActive = !(groupMap[key].isActive);
+		this.setState(groupMap);
+	}
+	
 	renderTaskList()
 	{
 		var keys = Object.keys(this.taskGroupMap);
@@ -93,11 +118,11 @@ class TaskList extends Component {
 		// For each group
 		for(var i = 0; i < keys.length; i++)
 		{
-			var key = keys[i];
+			const key = keys[i];
 			buffer.push(
-				<CardBody key = {key}>
-					<CardTitle>{key}</CardTitle>
-					<CardText>{this.state.taskGroupMap[key].taskCompleted} OF {this.taskGroupMap[key].taskTotal} TASKS COMPLETE</CardText>
+				<CardBody key = {key} onClick={() => this.updateCollapse(key)}>
+					<CardTitle><img src={groupIcon} /> {key}</CardTitle>
+					<CardText><Badge color="primary" pill>{this.state.taskGroupMap[key].taskCompleted}</Badge> OF {this.taskGroupMap[key].taskTotal} TASKS COMPLETE</CardText>
 				</CardBody>
 			);
 			// Add task to corresponding group
@@ -109,13 +134,14 @@ class TaskList extends Component {
 				var itemKey = tasks[j].group+tasks[j].id;
 				bufferTaskList.push(<TaskItem key={itemKey} callback={this.updateTask} task={tasks[j]} index = {j} taskMap={this.taskMap} />);
 			}
-			buffer.push(<ListGroup>{bufferTaskList}</ListGroup>);
+			buffer.push(<Collapse  isOpen={this.state.taskGroupMap[key].isActive}><ListGroup>{bufferTaskList}</ListGroup></Collapse>);
 		}
 		const element = (
 				<Card body>
 					{buffer}
 				</Card>
 		);
+		
 		return element;
 	}
 	

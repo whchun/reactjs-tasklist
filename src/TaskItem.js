@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import incompleteIcon from './images/Incomplete.svg';
 import completedIcon from './images/Completed.svg';
 import lockedIcon from './images/Locked.svg';
@@ -19,7 +18,7 @@ class TaskItem extends Component {
 		for(var i = 0; i < task.dependencyIds.length; i++)
 		{
 			var id = task.dependencyIds[i];
-			if ((this.taskMap[id] != null) && (this.taskMap[id].completedAt == null))
+			if ((this.taskMap[id] != null) && (this.taskMap[id].task.completedAt == null))
 			{
 				isLocked = true;
 				break;
@@ -33,9 +32,14 @@ class TaskItem extends Component {
 		this.props.callback(this.task, isLocked);
 	}
 
+	checkActive() {
+		const isActive = this.taskMap[this.task.id].isActive;
+		return isActive;
+	}
+	
 	render() {
 		return (
-			<ListGroupItem onClick={this.handleClick}>
+			<ListGroupItem onClick={this.handleClick} active={this.checkActive()}>
 				{this.task.task}
 			</ListGroupItem>
 		);

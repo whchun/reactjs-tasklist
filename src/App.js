@@ -1,9 +1,5 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
 import TaskList from './TaskList.js';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { ListGroup, ListGroupItem, Badge, Collapse, Card, CardHeader, CardSubtitle, CardBody, CardText, CardTitle, Row, Col} from 'reactstrap'
 
 const tasks = [
   {

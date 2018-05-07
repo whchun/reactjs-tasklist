@@ -111,6 +111,7 @@ class TaskList extends Component {
 		this.setState(groupMap);
 	}
 	
+	// Render group and corresponding tasks
 	renderTaskList()
 	{
 		var keys = Object.keys(this.taskGroupMap);
@@ -145,6 +146,7 @@ class TaskList extends Component {
 		return element;
 	}
 	
+	// Render detail of each task when selected
 	renderTaskDetail()
 	{
 		if (this.task == null)

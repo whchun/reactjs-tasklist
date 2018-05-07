@@ -12,6 +12,7 @@ class TaskItem extends Component {
 		this.taskMap = props.taskMap;
 	}
 	
+	// Check if current task has dependent tasks that has not completed.
 	checkLock(task)
 	{
 		var isLocked = false;
@@ -27,14 +28,16 @@ class TaskItem extends Component {
 		return isLocked;
 	}
 	
-	handleClick = () => {
-		const isLocked = this.checkLock(this.task);
-		this.props.callback(this.task, isLocked);
-	}
-
+	// Add active/selected UI based on selected task
 	checkActive() {
 		const isActive = this.taskMap[this.task.id].isActive;
 		return isActive;
+	}
+	
+	// Check lock and callback TaskList.js to update UI
+	handleClick = () => {
+		const isLocked = this.checkLock(this.task);
+		this.props.callback(this.task, isLocked);
 	}
 	
 	render() {
